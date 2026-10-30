@@ -44,7 +44,7 @@ docker load -i image-finder-1.4.tar
 docker run -d --name imagefinder \
   -p 8765:8765 \
   -v imagefinder-data:/app/data \
-  xdxy/image-finder:1.4
+  image-finder:1.4
 ```
 
 访问 `http://127.0.0.1:8765`。`/app/data` 挂载卷保存索引与缩略图，容器重建后数据不丢；如需索引本地目录，把目录追加挂载进容器后在页面中添加对应路径。
@@ -63,6 +63,6 @@ pyinstaller ImageFinder_1.4.spec
 ### Docker 镜像
 
 ```bash
-docker build -t xdxy/image-finder:1.4 .
-docker save -o image-finder-1.4.tar xdxy/image-finder:1.4
+docker build -t image-finder:1.4 .
+docker save -o image-finder-1.4.tar image-finder:1.4
 ```
