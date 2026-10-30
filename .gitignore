@@ -1,0 +1,11 @@
+data/
+build/
+dist/
+__pycache__/
+*.pyc
+icon_preview.png
+icns_check.png
+make_test_images.py
+test_images/
+verify.py
+screen_check*.png

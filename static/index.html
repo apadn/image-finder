@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>本地搜图 ImageFinder</title>
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --line:#e6e8ec; --line2:#eef0f3;
+  --txt:#171c23; --sub:#69727d; --sub2:#9aa3ad;
+  --accent:#4f7df9; --accent2:#3d63d8; --accent-soft:#eef3ff;
+  --ok:#22a95c; --warn:#e8a013; --bad:#e5484d;
+  --radius:14px; --shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.06);
+  --shadow-lg:0 12px 32px -8px rgba(16,24,40,.16);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:"Segoe UI Variable","Segoe UI","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;
+  background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased}
+.ic{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.ic.sm{width:14px;height:14px}
+.ic.lg{width:44px;height:44px;stroke-width:1.4}
+
+/* ---------- 顶栏 ---------- */
+header{display:flex;align-items:center;gap:13px;padding:12px 24px;background:rgba(255,255,255,.86);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+.logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#5b8cff 0%,#8b5cf6 100%);
+  display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 3px 10px -2px rgba(91,140,255,.5)}
+.logo .ic{width:21px;height:21px;stroke-width:2}
+header .titles h1{font-size:15.5px;margin:0;font-weight:650;letter-spacing:.2px}
+header .titles .sub{color:var(--sub);font-size:12.5px;margin-top:1px}
+header .right{margin-left:auto;display:flex;gap:9px;align-items:center}
+.stat{font-size:12.5px;color:var(--sub);background:var(--bg);padding:7px 13px;border-radius:99px;border:1px solid var(--line);display:flex;align-items:center;gap:6px}
+.stat b{color:var(--txt);font-weight:650}
+
+/* ---------- 按钮 ---------- */
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--txt);padding:8px 15px;border-radius:10px;
+  font-size:13.5px;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:7px;font-weight:500;
+  box-shadow:var(--shadow)}
+.btn:hover{border-color:#c9d4ea;color:var(--accent2);background:#fbfcff}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:linear-gradient(135deg,#5b8cff,#4f6ef2);border-color:transparent;color:#fff;font-weight:600;
+  box-shadow:0 3px 10px -2px rgba(79,110,242,.45)}
+.btn.primary:hover{filter:brightness(1.06);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+
+/* ---------- 布局 ---------- */
+.wrap{display:flex;gap:20px;padding:20px 24px;max-width:1500px;margin:0 auto}
+main{flex:1;min-width:0}
+
+/* ---------- 粘贴区 ---------- */
+.drop{border:1.5px dashed #ccd3dd;border-radius:var(--radius);background:
+  linear-gradient(180deg,#fdfdfe,#f9fafc);padding:44px 24px;text-align:center;cursor:pointer;transition:.18s;outline:none}
+.drop:hover,.drop.focus{border-color:var(--accent);background:var(--accent-soft)}
+.drop.has{padding:18px;border-style:solid;border-color:var(--line);background:var(--panel);box-shadow:var(--shadow)}
+.drop .emblem{width:74px;height:74px;margin:0 auto;border-radius:20px;background:var(--accent-soft);
+  display:flex;align-items:center;justify-content:center;color:var(--accent)}
+.drop .t1{font-size:15.5px;font-weight:650;margin-top:16px}
+.drop .t1 kbd{background:#fff;border:1px solid var(--line);border-bottom-width:2px;border-radius:6px;
+  padding:2px 8px;font-size:12.5px;font-family:inherit;color:var(--accent2);margin:0 2px}
+.drop .t2{color:var(--sub);font-size:13px;margin-top:7px}
+.drop img.preview{max-width:100%;max-height:320px;border-radius:10px;display:block;margin:0 auto;
+  box-shadow:var(--shadow-lg)}
+.drop .clear{margin-top:12px}
+
+/* ---------- 搜索栏 ---------- */
+.searchbar{display:flex;gap:16px;align-items:center;margin:18px 0 14px;flex-wrap:wrap}
+.searchbar label{font-size:13px;color:var(--sub)}
+.range-wrap{display:flex;align-items:center;gap:10px}
+input[type=range]{width:172px;accent-color:var(--accent)}
+.range-val{font-size:12.5px;color:var(--sub);min-width:76px}
+.tag{font-size:12px;padding:4px 11px;border-radius:99px;border:1px solid var(--line);color:var(--sub);display:inline-flex;align-items:center;gap:5px}
+.tag.on{background:var(--accent-soft);border-color:#d4e0fb;color:var(--accent2)}
+
+/* ---------- 结果 ---------- */
+.results-head{display:flex;align-items:baseline;gap:10px;margin:8px 0 14px}
+.results-head h2{font-size:14.5px;margin:0;font-weight:650}
+.results-head .n{color:var(--sub);font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(218px,1fr));gap:15px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;transition:.16s;box-shadow:var(--shadow)}
+.card:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px);border-color:#d9e0ea}
+.card .imgbox{height:172px;display:flex;align-items:center;justify-content:center;background:var(--line2);cursor:zoom-in;position:relative}
+.card .imgbox img{width:100%;height:100%;object-fit:cover;display:block}
+.card .zoomhint{position:absolute;right:8px;bottom:8px;width:26px;height:26px;border-radius:8px;
+  background:rgba(23,28,35,.55);color:#fff;display:flex;align-items:center;justify-content:center;opacity:0;transition:.15s}
+.card:hover .zoomhint{opacity:1}
+.card .meta{padding:11px 13px 13px}
+.card .name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .path{font-size:11.5px;color:var(--sub);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.card .path:hover{color:var(--accent);text-decoration:underline}
+.card .row{display:flex;align-items:center;margin-top:9px;gap:8px}
+.badge{font-size:11.5px;padding:3px 10px;border-radius:99px;font-weight:600;display:inline-flex;align-items:center;gap:5px}
+.badge.same{background:#e5f8ee;color:#137a41}
+.badge.sim{background:#fdf3df;color:#a4700a}
+.badge.far{background:#f1f3f6;color:#64707d}
+.badge.best{background:var(--accent-soft);color:var(--accent2)}
+.card .dims{font-size:11.5px;color:var(--sub2)}
+.card .acts{margin-left:auto;display:flex;gap:6px}
+.mini{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:4px 9px;font-size:11.5px;
+  cursor:pointer;color:var(--sub);display:inline-flex;align-items:center;gap:4px}
+.mini:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.empty{text-align:center;color:var(--sub);padding:56px 0;font-size:13.5px}
+
+/* ---------- 侧栏 ---------- */
+aside{width:308px;flex-shrink:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:17px;margin-bottom:15px;box-shadow:var(--shadow)}
+.panel h3{margin:0 0 13px;font-size:13.5px;font-weight:650;display:flex;align-items:center;gap:8px;color:var(--txt)}
+.panel h3 .ic{color:var(--accent)}
+.panel h3 .dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.panel h3 .dot.run{background:var(--warn);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.3}}
+.rootlist{list-style:none;margin:0 0 12px;padding:0;max-height:212px;overflow:auto}
+.rootlist li{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--line2);border-radius:10px;margin-bottom:7px;font-size:12.5px;background:#fbfcfd}
+.rootlist li .ic{color:var(--sub2)}
+.rootlist li .p{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:rtl;text-align:left}
+.rootlist li .del{color:var(--sub2);cursor:pointer;border:none;background:none;padding:0 2px;display:flex}
+.rootlist li .del:hover{color:var(--bad)}
+.addrow{display:flex;gap:8px}
+.addrow input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:8.5px 11px;font-size:13px;background:#fbfcfd}
+.addrow input:focus{outline:none;border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px var(--accent-soft)}
+.btn.browse{width:100%;justify-content:center;margin-top:9px;color:var(--accent2);border-color:#d4e0fb;background:var(--accent-soft);box-shadow:none}
+.btn.browse:hover{background:#e2ecff;border-color:#b9cff8}
+.progress{height:6px;background:#eaedf2;border-radius:6px;overflow:hidden;margin:12px 0 7px}
+.progress .bar{height:100%;width:0%;background:linear-gradient(90deg,#5b8cff,#8b5cf6);transition:width .3s;border-radius:6px}
+.ptext{font-size:12px;color:var(--sub);word-break:break-all;max-height:34px;overflow:hidden}
+.kv{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;color:var(--sub)}
+.kv b{color:var(--txt);font-weight:600}
+.hint{font-size:12px;color:var(--sub);line-height:1.9}
+
+/* ---------- 通用 ---------- */
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(72px);
+  background:#1b2027;color:#fff;padding:11px 20px;border-radius:12px;font-size:13.5px;opacity:0;
+  transition:.25s;z-index:99;pointer-events:none;box-shadow:var(--shadow-lg);max-width:80vw}
+.toast.show{opacity:.97;transform:translateX(-50%) translateY(0)}
+.lightbox{position:fixed;inset:0;background:rgba(14,17,22,.88);display:none;align-items:center;justify-content:center;z-index:50;cursor:zoom-out;backdrop-filter:blur(4px)}
+.lightbox.show{display:flex}
+.lightbox img{max-width:92vw;max-height:90vh;border-radius:10px;box-shadow:var(--shadow-lg)}
+@media (max-width:1000px){.wrap{flex-direction:column}aside{width:100%}}
+</style>
+</head>
+<body>
+
+<!-- 矢量图标库（线性风格） -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><line x1="21" y1="21" x2="16.4" y2="16.4"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.6" cy="8.6" r="1.6"/><path d="M21 15.5l-4.8-4.8a1.4 1.4 0 0 0-2 0L5 20"/></symbol>
+    <symbol id="i-paste" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1.2"/><path d="M9 13l2.2 2.2L15.5 11"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 4v6h-6"/><path d="M3 20v-6h6"/><path d="M20.5 13a8.6 8.6 0 0 1-14.9 3.6L3 14"/><path d="M3.5 11a8.6 8.6 0 0 1 14.9-3.6L21 10"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="i-folder-plus" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+    <symbol id="i-scan" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><line x1="12" y1="16.5" x2="12" y2="11"/><line x1="12" y1="7.5" x2="12.01" y2="7.5"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 11.5-8 11.5S4 16 4 10a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="2.8"/></symbol>
+    <symbol id="i-zoom" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><line x1="21" y1="21" x2="16.4" y2="16.4"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></symbol>
+    <symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></symbol>
+    <symbol id="i-logo" viewBox="0 0 24 24"><rect x="2.5" y="4" width="14" height="14" rx="3"/><circle cx="7.4" cy="8.9" r="1.5"/><path d="M16.5 14.5l-3.6-3.6a1.3 1.3 0 0 0-1.9 0l-6 6.1"/><circle cx="17.5" cy="17.5" r="4"/><line x1="23.5" y1="23.5" x2="20.4" y2="20.4"/></symbol>
+  </defs>
+</svg>
+
+<header>
+  <div class="logo"><svg class="ic"><use href="#i-logo"/></svg></div>
+  <div class="titles">
+    <h1>本地搜图 ImageFinder</h1>
+    <div class="sub">粘贴剪贴板图片（Ctrl+V），搜索硬盘中的相同 / 相似图片</div>
+  </div>
+  <div class="right">
+    <div class="stat"><svg class="ic sm"><use href="#i-db"/></svg>已索引 <b id="indexedN">0</b> 张</div>
+    <button class="btn" id="btnScan2"><svg class="ic"><use href="#i-refresh"/></svg>更新索引</button>
+  </div>
+</header>
+
+<div class="wrap">
+<main>
+  <div class="drop" id="drop" tabindex="0">
+    <div id="dropEmpty">
+      <div class="emblem"><svg class="ic lg"><use href="#i-paste"/></svg></div>
+      <div class="t1">点击此处，然后按 <kbd>Ctrl</kbd>+<kbd>V</kbd> 粘贴图片</div>
+      <div class="t2">也可以直接把图片文件拖进来，或点击选择文件 · 页面任意位置按 Ctrl+V 均可</div>
+      <input type="file" id="fileInput" accept="image/*" hidden>
+    </div>
+    <div id="dropImg" style="display:none">
+      <img class="preview" id="preview" alt="待搜索图片">
+      <div class="clear"><button class="mini" id="btnClear"><svg class="ic sm"><use href="#i-x"/></svg>清除</button></div>
+    </div>
+  </div>
+
+  <div class="searchbar">
+    <button class="btn primary" id="btnSearch" disabled><svg class="ic"><use href="#i-search"/></svg>开始搜索</button>
+    <div class="range-wrap">
+      <label>相似度</label>
+      <input type="range" id="threshold" min="0" max="20" value="12">
+      <span class="range-val" id="thresholdVal"></span>
+    </div>
+    <span class="tag" id="tagMode">平衡模式</span>
+    <span class="tag on" id="tagTotal" style="display:none"></span>
+  </div>
+
+  <div class="results-head"><h2>搜索结果</h2><span class="n" id="resultN"></span></div>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="emptyHint">粘贴或拖入一张图片开始搜索</div>
+</main>
+
+<aside>
+  <div class="panel">
+    <h3><span class="dot" id="dotScan"></span><svg class="ic"><use href="#i-folder"/></svg>索引目录</h3>
+    <ul class="rootlist" id="rootList"></ul>
+    <div class="addrow">
+      <input type="text" id="rootInput" placeholder="例如 D:\设计素材 或 D:\">
+      <button class="btn" id="btnAddRoot">添加</button>
+    </div>
+    <button class="btn browse" id="btnBrowse"><svg class="ic"><use href="#i-folder-plus"/></svg>浏览选择文件夹…</button>
+  </div>
+  <div class="panel">
+    <h3><span class="dot" id="dotScan2"></span><svg class="ic"><use href="#i-scan"/></svg>扫描进度</h3>
+    <div class="progress"><div class="bar" id="pbar"></div></div>
+    <div class="ptext" id="ptext">未在扫描</div>
+    <div style="display:flex;gap:9px;margin-top:11px">
+      <button class="btn primary" id="btnScan" style="flex:1;justify-content:center"><svg class="ic"><use href="#i-refresh"/></svg>扫描 / 更新索引</button>
+      <button class="btn" id="btnStop"><svg class="ic"><use href="#i-stop"/></svg>停止</button>
+    </div>
+    <div style="margin-top:12px">
+      <div class="kv"><span>已索引图片</span><b id="indexedN2">0</b></div>
+      <div class="kv"><span>无法解析跳过</span><b id="failedN">0</b></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h3><svg class="ic"><use href="#i-info"/></svg>使用提示</h3>
+    <div class="hint">
+      · 首次使用：添加存放图片的文件夹 → 点「扫描索引」<br>
+      · 新增图片后点「更新索引」即可增量更新，很快<br>
+      · 相似度往左调 = 只找几乎相同的图；往右 = 连构图相近的也找出<br>
+      · 阈值 0–5：同一张图（转存/压缩后）；6–12：相似图；13+：宽松<br>
+      · 悬停结果图可放大查看，点路径复制，可打开文件所在位置
+    </div>
+  </div>
+</aside>
+</main>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="lightbox" id="lightbox"><img id="lbImg" alt=""></div>
+
+<script>
+const $=s=>document.querySelector(s);
+let queryBlob=null, lastResults=[];
+
+/* ---------- 粘贴/拖拽/选择 ---------- */
+const drop=$('#drop'), fileInput=$('#fileInput');
+drop.addEventListener('click',e=>{if(!e.target.closest('button'))fileInput.click();});
+fileInput.addEventListener('change',()=>{if(fileInput.files[0])loadQuery(fileInput.files[0]);fileInput.value='';});
+document.addEventListener('paste',e=>{
+  const items=e.clipboardData&&e.clipboardData.items;if(!items)return;
+  for(const it of items){
+    if(it.type&&it.type.startsWith('image/')){
+      const f=it.getAsFile();if(f){loadQuery(f);e.preventDefault();}
+      return;
+    }
+  }
+  toast('剪贴板里没有检测到图片（截图/复制图片后再试）');
+});
+['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('focus');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('focus');}));
+drop.addEventListener('drop',e=>{
+  const f=e.dataTransfer.files&&e.dataTransfer.files[0];
+  if(f&&f.type.startsWith('image/'))loadQuery(f);
+  else if(f)toast('该文件不是图片');
+});
+
+function loadQuery(file){
+  queryBlob=file;
+  const url=URL.createObjectURL(file);
+  $('#preview').src=url;
+  $('#dropEmpty').style.display='none';
+  $('#dropImg').style.display='';
+  drop.classList.add('has');
+  $('#btnSearch').disabled=false;
+  $('#emptyHint').style.display='';
+  $('#emptyHint').textContent='已就绪，点击「开始搜索」或按 Enter';
+}
+$('#btnClear').addEventListener('click',e=>{
+  e.stopPropagation();
+  queryBlob=null;
+  $('#dropEmpty').style.display='';$('#dropImg').style.display='none';
+  drop.classList.remove('has');$('#btnSearch').disabled=true;
+  $('#emptyHint').textContent='粘贴或拖入一张图片开始搜索';
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.target.matches('input')&&!$('#btnSearch').disabled)doSearch();
+});
+
+/* ---------- 搜索 ---------- */
+$('#threshold').addEventListener('input',()=>{
+  const v=+$('#threshold').value;
+  const mode=v<=5?'严格：只找同一张图':v<=12?'平衡模式':'宽松：构图相近也找出';
+  $('#tagMode').textContent=mode;
+  $('#thresholdVal').textContent=`距离 ≤ ${v}`;
+  render();
+});
+$('#thresholdVal').textContent='距离 ≤ 12';
+
+$('#btnSearch').addEventListener('click',doSearch);
+async function doSearch(){
+  if(!queryBlob)return;
+  $('#btnSearch').disabled=true;$('#btnSearch').textContent='搜索中…';
+  try{
+    const r=await fetch('/api/search',{method:'POST',body:queryBlob});
+    if(!r.ok){const j=await r.json().catch(()=>({}));toast('搜索失败：'+(j.error||r.status));return;}
+    const j=await r.json();
+    lastResults=j.results||[];
+    const t=$('#tagTotal');t.style.display='';t.textContent='库中共 '+j.total+' 张图';
+    render();
+  }catch(err){toast('网络错误：'+err.message);}
+  finally{$('#btnSearch').disabled=false;$('#btnSearch').innerHTML='<svg class="ic"><use href="#i-search"/></svg>开始搜索';}
+}
+
+function fmtSize(n){
+  if(n>=1048576)return (n/1048576).toFixed(1)+' MB';
+  if(n>=1024)return (n/1024).toFixed(0)+' KB';
+  return n+' B';
+}
+function render(){
+  const th=+$('#threshold').value;
+  const list=lastResults.filter(r=>r.dist<=th);
+  $('#resultN').textContent=list.length?`共 ${list.length} 个匹配（按相似度排序）`:'';
+  const grid=$('#grid');grid.innerHTML='';
+  $('#emptyHint').style.display=list.length?'none':'';
+  if(!list.length&&lastResults.length)$('#emptyHint').textContent='在当前阈值下没有匹配，试试调大相似度';
+  else if(!lastResults.length)$('#emptyHint').textContent='还没有搜索结果';
+  list.forEach((r,i)=>{
+    const pct=Math.round((64-r.dist)/64*100);
+    const cls=r.dist<=5?'same':r.dist<=12?'sim':'far';
+    const card=document.createElement('div');card.className='card';
+    card.innerHTML=`
+      <div class="imgbox"><img src="/thumb/${r.id}" loading="lazy" alt="">
+        <span class="zoomhint"><svg class="ic sm"><use href="#i-zoom"/></svg></span></div>
+      <div class="meta">
+        <div class="name" title="${esc(r.path)}">${esc(r.path.split(/[\\/]/).pop())}</div>
+        <div class="path" title="点击在资源管理器中打开所在文件夹">${esc(r.path)}</div>
+        <div class="row">
+          <span class="badge ${cls}${i===0?' best':''}">${i===0?'最相似 ':''}${pct}%${r.same?' · 同图':''}</span>
+          <span class="dims">${r.w}×${r.h} · ${fmtSize(r.size)}</span>
+          <div class="acts">
+            <button class="mini" data-reveal="${escAttr(r.path)}"><svg class="ic sm"><use href="#i-pin"/></svg>位置</button>
+          </div>
+        </div>
+      </div>`;
+    card.querySelector('.imgbox').addEventListener('click',()=>{
+      $('#lbImg').src='/thumb/'+r.id;$('#lightbox').classList.add('show');
+    });
+    card.querySelector('.path').addEventListener('click',async()=>{
+      const r2=await fetch('/api/reveal?path='+encodeURIComponent(r.path));
+      if(!r2.ok)toast('文件已不存在，可能已被移动或删除');
+    });
+    card.querySelector('[data-reveal]').addEventListener('click',async e=>{
+      const p=e.currentTarget.dataset.reveal;
+      const r2=await fetch('/api/reveal?path='+encodeURIComponent(p));
+      if(!r2.ok)toast('文件已不存在');
+    });
+    grid.appendChild(card);
+  });
+}
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function escAttr(s){return esc(s).replace(/'/g,'&#39;');}
+
+/* ---------- 索引管理 ---------- */
+$('#btnAddRoot').addEventListener('click',addRoot);
+$('#rootInput').addEventListener('keydown',e=>{if(e.key==='Enter')addRoot();});
+$('#btnBrowse').addEventListener('click',async()=>{
+  if(!(window.pywebview&&window.pywebview.api&&window.pywebview.api.pick_folder)){
+    toast('当前模式无原生选择框，请在上方输入路径后点「添加」');return;
+  }
+  const p=await window.pywebview.api.pick_folder();
+  if(!p)return; // 用户取消
+  const r=await fetch('/api/roots',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'add',roots:[p]})});
+  const j=await r.json();
+  if(!r.ok){toast('添加失败：'+(j.error||''));return;}
+  renderRoots(j.roots);toast('已添加：'+p);
+});
+async function addRoot(){
+  const v=$('#rootInput').value.trim();
+  if(!v){toast('请输入文件夹路径，例如 D:\\设计素材');return;}
+  const r=await fetch('/api/roots',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'add',roots:[v]})});
+  const j=await r.json();
+  if(!r.ok){toast('添加失败：'+(j.error||''));return;}
+  $('#rootInput').value='';renderRoots(j.roots);toast('已添加，记得点「扫描索引」');
+}
+async function removeRoot(p){
+  const r=await fetch('/api/roots',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'remove',roots:[p]})});
+  const j=await r.json();renderRoots(j.roots);
+}
+function renderRoots(roots){
+  const ul=$('#rootList');ul.innerHTML='';
+  (roots||[]).forEach(p=>{
+    const li=document.createElement('li');
+    li.innerHTML=`<svg class="ic sm"><use href="#i-folder"/></svg><span class="p" title="${esc(p)}">${esc(p)}</span><button class="del" title="移除"><svg class="ic sm"><use href="#i-x"/></svg></button>`;
+    li.querySelector('.del').addEventListener('click',()=>removeRoot(p));
+    ul.appendChild(li);
+  });
+}
+
+$('#btnScan').addEventListener('click',startScan);
+$('#btnScan2').addEventListener('click',startScan);
+$('#btnStop').addEventListener('click',()=>fetch('/api/stop',{method:'POST'}));
+async function startScan(){
+  const st=await(await fetch('/api/status')).json();
+  if(!st.roots||!st.roots.length){toast('请先在右侧添加索引目录');return;}
+  if(st.scanning){toast('正在扫描中…');return;}
+  await fetch('/api/scan',{method:'POST'});
+  toast('开始扫描，大文件夹首次需要一些时间');
+}
+
+/* ---------- 状态轮询 ---------- */
+async function pollStatus(){
+  try{
+    const st=await(await fetch('/api/status')).json();
+    $('#indexedN').textContent=st.indexed;$('#indexedN2').textContent=st.indexed;
+    $('#failedN').textContent=st.failed;
+    if(!SCANNER_PATHS_INIT){renderRoots(st.roots);SCANNER_PATHS_INIT=true;}
+    const pct=st.total?Math.round(st.scanned/st.total*100):0;
+    $('#pbar').style.width=(st.scanning?pct:(st.last_finish?'100%':'0%'));
+    $('#ptext').textContent=st.scanning
+      ?`${st.scanned} / ${st.total}（新增 ${st.found_new}）— ${st.current||''}`
+      :(st.last_finish?`上次扫描完成于 ${new Date(st.last_finish*1000).toLocaleTimeString()}`:'未在扫描');
+    const run=st.scanning?'run':'';
+    $('#dotScan').className='dot '+run;$('#dotScan2').className='dot '+run;
+  }catch(e){}
+}
+let SCANNER_PATHS_INIT=false;
+pollStatus();setInterval(pollStatus,2000);
+
+/* ---------- 通用 ---------- */
+let toastTimer=null;
+function toast(msg){
+  const t=$('#toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2600);
+}
+$('#lightbox').addEventListener('click',()=>$('#lightbox').classList.remove('show'));
+</script>
+</body>
+</html>
