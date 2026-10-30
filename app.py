@@ -455,9 +455,7 @@ class Api:
 
 
 def start_server():
-    # 容器内需监听 0.0.0.0 才能被端口映射访问；本地桌面默认 127.0.0.1
-    host = os.environ.get("HOST", "127.0.0.1")
-    server = ThreadingHTTPServer((host, PORT), Handler)
+    server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     return server
 
