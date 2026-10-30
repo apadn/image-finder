@@ -30,28 +30,14 @@ python app.py
 
 启动后浏览器访问 `http://127.0.0.1:8765`。首次使用在页面右侧「索引目录」添加要搜索的文件夹，然后点击「扫描索引」。
 
-监听地址默认 `127.0.0.1`，可用环境变量 `HOST` 覆盖（如容器内设 `0.0.0.0`）；端口固定 `8765`（代码内 `PORT`）。
+监听地址默认 `127.0.0.1`，可用环境变量 `HOST` 覆盖；端口固定 `8765`（代码内 `PORT`）。
 
 启动模式：
 
 - `python app.py` — 浏览器模式（默认）
 - `python app.py --window` — 原生窗口模式（需 `pywebview`，exe 打包默认走此模式，失败自动回退浏览器）
 
-## Docker 运行
-
-```bash
-docker load -i image-finder-1.4.tar
-docker run -d --name imagefinder \
-  -p 8765:8765 \
-  -v imagefinder-data:/app/data \
-  image-finder:1.4
-```
-
-访问 `http://127.0.0.1:8765`。`/app/data` 挂载卷保存索引与缩略图，容器重建后数据不丢；如需索引本地目录，把目录追加挂载进容器后在页面中添加对应路径。
-
 ## 打包
-
-### Windows exe
 
 ```bash
 pip install pillow pywebview pyinstaller
@@ -59,10 +45,3 @@ pyinstaller ImageFinder_1.4.spec
 ```
 
 产物在 `dist/`，为绿色版目录，`data/` 生成在 exe 旁边，可随意移动。
-
-### Docker 镜像
-
-```bash
-docker build -t image-finder:1.4 .
-docker save -o image-finder-1.4.tar image-finder:1.4
-```
